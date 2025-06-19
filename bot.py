@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 import telebot
+from flask import Flask, request
 
-TOKEN = '7850920014:AAFAsa_8brgmaRj2oIaszF7BhEFceodWNZc'  # ← BU YERGA TOKEN QO‘YING
+TOKEN = '7850920014:AAFAsa_8brgmaRj2oIaszF7BhEFceodWNZc'
 bot = telebot.TeleBot(TOKEN)
+app = Flask(__name__)
 
-waiting_users = []  # Kutayotgan foydalanuvchilar
-paired_users = {}   # Ulangan foydalanuvchilar: {user_id: partner_id}
-users = set()       # Umumiy foydalanuvchilar ro‘yxati
+waiting_users = []
+paired_users = {}
+users = set()
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
@@ -97,4 +99,19 @@ def forward_messages(message):
         partner_id = paired_users[user_id]
         bot.send_message(partner_id, message.text)
 
-bot.polling()
+@app.route(f"/{TOKEN}", methods=['POST'])
+def receive_update():
+    update = telebot.types.Update.de_json(request.stream.read().decode("utf-8"))
+    bot.process_new_updates([update])
+    return "OK", 200
+
+@app.route('/')
+def index():
+    return "Bot ishlayapti!", 200
+
+if __name__ == "__main__":
+    import os
+    port = int(os.environ.get("PORT", 5000))
+    bot.remove_webhook()
+    bot.set_webhook(url=f"https:/anonychat.onrender.com/{TOKEN}")
+    app.run(host="0.0.0.0", port=port)
